@@ -104,7 +104,8 @@
     "deviceId": "ABC123456",
     "online": true,
     "workStatus": "idle",
-    "battery": 64
+    "battery": 64,
+    "water": 100
   }
 }
 ```
@@ -118,10 +119,14 @@
 ```json
 {
   "body": {
-    "cmd": "start"
+    "cmd": "start",
+    "mode": "steam"
   }
 }
 ```
+mode: steam	蒸汽 、blower 吹风、 suction_water 吸水、 vacuum	吸尘
+
+
 
 #### 指令确认 Ack
 
@@ -132,6 +137,7 @@
   "body": {
     "refMsgId": "uuid-cmd-001",
     "cmd": "start",
+    "mode": "steam",
     "accepted": true,
     "reason": ""
   }
