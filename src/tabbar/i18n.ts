@@ -5,6 +5,7 @@ import { isNativeTabbar, tabbarList } from './config'
 // h5 中一直可以生效，小程序里面默认是无法动态切换的，这里借助vue模板自带响应式的方式
 // 直接替换 %xxx% 为 t('xxx')即可
 export function getI18nText(key: string) {
+  if (!key) return ''
   // 获取 %xxx% 中的 xxx
   const match = key.match(/%(.+?)%/)
   if (match) {

@@ -168,4 +168,11 @@ declare global {
   }
 }
 
+// 修复 @uni-helper/uni-types view 组件 class 属性类型问题
+declare module '@vue/runtime-core' {
+  interface AllowedComponentProps {
+    class?: string | Record<string, boolean> | (string | Record<string, boolean>)[]
+  }
+}
+
 export {} // 防止模块污染

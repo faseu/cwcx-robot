@@ -326,9 +326,12 @@ class MqttService {
   }
 
   /** 发送控制指令 */
-  sendCommand(deviceId: string, cmd: CommandBody['cmd']): Promise<string> {
+  sendCommand(deviceId: string, cmd: CommandBody['cmd'], mode?: CommandBody['mode']): Promise<string> {
     const topic = `/cleanbot/${deviceId}/cmd`
     const body: CommandBody = { cmd }
+    if (mode) {
+      body.mode = mode
+    }
     return this.publish(topic, body)
   }
 

@@ -46,9 +46,13 @@ export interface HeartbeatBody {
   timestamp: number
 }
 
+/** 清洁工作模式 */
+export type CleanMode = 'steam' | 'blower' | 'suction_water' | 'vacuum'
+
 /** 控制指令 Body */
 export interface CommandBody {
   cmd: 'start' | 'stop' | 'pause' | 'resume' | 'home' | 'charge'
+  mode?: CleanMode
 }
 
 /** 指令确认 Body */

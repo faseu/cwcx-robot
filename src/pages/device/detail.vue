@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { DeviceInfo } from '@/mqtt'
+import type { CleanMode, DeviceInfo } from '@/mqtt'
 import { useDeviceStore } from '@/store/device'
 
 defineOptions({
@@ -46,10 +46,19 @@ onMounted(() => {
 })
 
 /** 页面加载 */
-onLoad((options) => {
+onLoad(async (options) => {
   if (options?.deviceId) {
     deviceId.value = options.deviceId
     deviceStore.setCurrentDevice(options.deviceId)
+  }
+  // 确保 MQTT 已连接
+  if (deviceStore.connectionStatus !== 'connected') {
+    try {
+      await deviceStore.connect()
+    }
+    catch (err) {
+      console.error('[Detail] MQTT connect error:', err)
+    }
   }
 })
 
@@ -152,6 +161,43 @@ const taskTypes = [
   { type: 'patrol', label: '巡逻', desc: '安全巡检任务', icon: 'i-carbon-location-current', color: '#00ff88' },
   { type: 'charge', label: '充电', desc: '返回充电任务', icon: 'i-carbon-battery-charging', color: '#ffaa00' },
 ] as const
+
+/** 工作模式配置 */
+const workModes = [
+  { mode: 'steam' as CleanMode, label: '蒸汽', desc: '高温蒸汽清洁', icon: 'i-carbon-fog', color: '#ff6b6b' },
+  { mode: 'blower' as CleanMode, label: '吹风', desc: '强力吹风除尘', icon: 'i-carbon-wind-stream', color: '#4ecdc4' },
+  { mode: 'suction_water' as CleanMode, label: '吸水', desc: '地面吸水清理', icon: 'i-carbon-dew-point', color: '#00d4ff' },
+  { mode: 'vacuum' as CleanMode, label: '吸尘', desc: '深度吸尘清洁', icon: 'i-carbon-tornado', color: '#a855f7' },
+]
+
+/** 当前激活的工作模式 */
+const activeMode = ref<CleanMode | ''>('')
+
+/** 启动指定工作模式 */
+async function startWithMode(mode: CleanMode) {
+  if (!device.value?.online) {
+    uni.showToast({ title: '设备离线', icon: 'none' })
+    return
+  }
+  if (commanding.value)
+    return
+
+  commanding.value = true
+  activeMode.value = mode
+  try {
+    await deviceStore.sendCommand(deviceId.value, 'start', mode)
+    uni.showToast({ title: '指令已发送', icon: 'success' })
+  }
+  catch {
+    uni.showToast({ title: '发送失败', icon: 'error' })
+  }
+  finally {
+    setTimeout(() => {
+      commanding.value = false
+      activeMode.value = ''
+    }, 500)
+  }
+}
 </script>
 
 <template>
@@ -310,6 +356,38 @@ const taskTypes = [
                 <view class="icon-glow" />
               </view>
               <text class="control-label">{{ btn.label }}</text>
+            </view>
+          </view>
+        </view>
+
+        <!-- 工作模式 -->
+        <view class="section-card">
+          <view class="section-header">
+            <view class="section-icon">
+              <text class="i-carbon-operations-field" />
+            </view>
+            <view class="section-title">
+              工作模式
+            </view>
+            <view class="section-line" />
+          </view>
+
+          <view class="mode-grid">
+            <view
+              v-for="item in workModes"
+              :key="item.mode"
+              class="mode-item"
+              :class="{ active: activeMode === item.mode, disabled: !device.online || commanding }"
+              @click="startWithMode(item.mode)"
+            >
+              <view class="mode-icon" :style="{ '--mode-color': item.color }">
+                <text :class="item.icon" />
+                <view class="icon-ring" />
+              </view>
+              <view class="mode-info">
+                <text class="mode-label">{{ item.label }}</text>
+                <text class="mode-desc">{{ item.desc }}</text>
+              </view>
             </view>
           </view>
         </view>
@@ -1069,6 +1147,103 @@ $text-secondary: rgba(255, 255, 255, 0.6);
   }
   50% {
     transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+// 工作模式网格
+.mode-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20rpx;
+
+  .mode-item {
+    display: flex;
+    align-items: center;
+    gap: 20rpx;
+    padding: 24rpx;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1rpx solid transparent;
+    border-radius: 16rpx;
+    transition: all 0.3s;
+
+    .mode-icon {
+      position: relative;
+      width: 80rpx;
+      height: 80rpx;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(var(--mode-color), 0.15);
+      border-radius: 50%;
+      font-size: 36rpx;
+      color: var(--mode-color);
+
+      .icon-ring {
+        position: absolute;
+        inset: -4rpx;
+        border-radius: 50%;
+        border: 2rpx solid var(--mode-color);
+        opacity: 0.3;
+      }
+    }
+
+    .mode-info {
+      flex: 1;
+      min-width: 0;
+
+      .mode-label {
+        display: block;
+        font-size: 28rpx;
+        font-weight: 600;
+        color: $text-primary;
+      }
+
+      .mode-desc {
+        display: block;
+        font-size: 20rpx;
+        color: $text-secondary;
+        margin-top: 4rpx;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
+
+    &:active:not(.disabled) {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: var(--mode-color);
+      transform: scale(0.98);
+
+      .mode-icon {
+        transform: scale(1.1);
+        box-shadow: 0 0 20rpx rgba(var(--mode-color), 0.5);
+      }
+    }
+
+    &.active {
+      border-color: var(--mode-color);
+      background: rgba(255, 255, 255, 0.05);
+
+      .mode-icon {
+        animation: modePulse 0.5s ease-out;
+      }
+    }
+
+    &.disabled {
+      opacity: 0.3;
+    }
+  }
+}
+
+@keyframes modePulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
   }
   100% {
     transform: scale(1);

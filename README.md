@@ -114,6 +114,8 @@
 
 ### 6.2 控制指令 & Ack 确认（增强）
 
+- Topic：`/cleanbot/{deviceId}/cmd`
+
 #### 指令下发
 
 ```json
@@ -124,13 +126,75 @@
   }
 }
 ```
-mode: steam	蒸汽 、blower 吹风、 suction_water 吸水、 vacuum	吸尘
 
+#### 字段说明
 
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| cmd | string | 是 | 控制指令类型 |
+| mode | string | 否 | 工作模式（仅 `start` 指令时需要） |
+
+#### cmd 指令类型
+
+| 值 | 说明 |
+|------|------|
+| start | 启动清洁 |
+| stop | 停止清洁 |
+| pause | 暂停 |
+| resume | 恢复 |
+
+#### mode 工作模式
+
+| 值 | 说明 |
+|------|------|
+| steam | 蒸汽清洁 |
+| blower | 吹风 |
+| suction_water | 吸水 |
+| vacuum | 吸尘 |
+
+#### 指令示例
+
+启动蒸汽清洁：
+```json
+{
+  "body": {
+    "cmd": "start",
+    "mode": "steam"
+  }
+}
+```
+
+停止工作：
+```json
+{
+  "body": {
+    "cmd": "stop"
+  }
+}
+```
+
+暂停当前任务：
+```json
+{
+  "body": {
+    "cmd": "pause"
+  }
+}
+```
+
+恢复任务：
+```json
+{
+  "body": {
+    "cmd": "resume"
+  }
+}
+```
 
 #### 指令确认 Ack
 
 - Topic：`/cleanbot/{deviceId}/cmd/ack`
+- 说明：机器人收到指令后返回确认消息，表示指令是否被接受执行
 
 ```json
 {
@@ -140,6 +204,44 @@ mode: steam	蒸汽 、blower 吹风、 suction_water 吸水、 vacuum	吸尘
     "mode": "steam",
     "accepted": true,
     "reason": ""
+  }
+}
+```
+
+#### Ack 字段说明
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| refMsgId | string | 是 | 关联的原始指令消息 ID（来自 meta.msgId） |
+| cmd | string | 是 | 确认的指令类型 |
+| mode | string | 否 | 确认的工作模式（若原指令包含） |
+| accepted | boolean | 是 | 指令是否被接受（true=接受，false=拒绝） |
+| reason | string | 否 | 拒绝原因（accepted=false 时填写） |
+
+#### Ack 示例
+
+指令接受：
+```json
+{
+  "body": {
+    "refMsgId": "uuid-cmd-001",
+    "cmd": "start",
+    "mode": "steam",
+    "accepted": true,
+    "reason": ""
+  }
+}
+```
+
+指令拒绝（电量不足）：
+```json
+{
+  "body": {
+    "refMsgId": "uuid-cmd-002",
+    "cmd": "start",
+    "mode": "vacuum",
+    "accepted": false,
+    "reason": "电量不足，无法启动"
   }
 }
 ```

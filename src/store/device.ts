@@ -1,5 +1,6 @@
 import type {
   BaseMessage,
+  CleanMode,
   CommandAckBody,
   ConnectionStatus,
   DeviceInfo,
@@ -231,11 +232,12 @@ export const useDeviceStore = defineStore(
     async function sendCommand(
       deviceId: string,
       cmd: 'start' | 'stop' | 'pause' | 'resume' | 'home' | 'charge',
+      mode?: CleanMode,
     ): Promise<string> {
       if (connectionStatus.value !== 'connected') {
         throw new Error('MQTT未连接')
       }
-      return mqttService.sendCommand(deviceId, cmd)
+      return mqttService.sendCommand(deviceId, cmd, mode)
     }
 
     /** 发送任务 */
